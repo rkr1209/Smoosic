@@ -43,13 +43,20 @@ class SmoTranslator {
       return;
     }
     _dialogClass['label'] = dialogStrings.label;
+    var staticText = dialogStrings.dialogElements.find((ds) => ds.staticText);
     _dialogClass['dialogElements'].forEach((component) => {
       var componentStrings = dialogStrings.dialogElements.find((ds) => {
         return ds.id === component.smoName;
       });
-      if (!componentStrings) {
-        console.log('no strings for component '+component.smoName+' in dialog '+dialogClass);
-      } else {
+      if (component.staticText && staticText) {
+        component.staticText.forEach((st) => {
+          const trans = staticText.staticText.find((dst) => Object.keys(dst)[0] == Object.keys(st)[0]);
+          if (trans) {
+            const key = Object.keys(st)[0];
+            st[key] = trans[key];
+          }
+        });
+      }  else if (componentStrings) {
         component.label = componentStrings.label;
         if (component['options']) {
           component['options'].forEach((option) => {
@@ -61,6 +68,8 @@ class SmoTranslator {
             }
           });
         }
+      } else {
+        console.log('Untranslated component in  ' + dialogClass);
       }
     });
   }
@@ -115,9 +124,22 @@ class SmoTranslator {
       }
 
       SmoTranslator._updateDialog(dialogStrings,_class,dialogClass);
-
     });
 
+    // Translate the buttons on the ribbon
+    const langButtons = trans.strings.find((buttonObj) => buttonObj.ribbonText);
+    if (langButtons) {
+      RibbonButtons.translateButtons.forEach((button) => {
+        var domButton = $(button);
+        var langButton = langButtons.ribbonText.find((lb) => lb.buttonId === button.buttonId);
+        if (langButton) {
+          var buttonDom = $('.ribbonButtonContainer #'+button.buttonId);
+          if (buttonDom.length) {
+            $(buttonDom).find('.left-text').text(langButton.buttonText);
+          }
+        }
+      });
+    }
     // Handle rtl languages
     $('body').find('.language-dir').each((ix,dd) => {$(dd).attr('dir',trans.dir)});
   }
@@ -125,14 +147,16 @@ class SmoTranslator {
   static get allMenus() {
     return [
       'SuiAddStaffMenu',
+      'SuiMeasureMenu',
       'SuiFileMenu',
       'SuiTimeSignatureMenu',
       'SuiKeySignatureMenu',
       'SuiTimeSignatureMenu',
       'SuiKeySignatureMenu',
-      'SuiFileMenu',
       'SuiStaffModifierMenu',
-      'SuiDynamicsMenu'
+      'SuiDynamicsMenu',
+      'SuiLanguageMenu',
+      'SuiScoreMenu'
     ]
   }
 
@@ -143,12 +167,20 @@ class SmoTranslator {
       'SuiPrintFileDialog',
       'SuiMeasureDialog',
       'SuiTempoDialog',
+      'SuiInstrumentDialog',
       'SuiTimeSignatureDialog',
       'SuiLayoutDialog',
       'SuiDynamicModifierDialog',
       'SuiSlurAttributesDialog',
       'SuiVoltaAttributeDialog',
-      'SuiHairpinAttributesDialog'
+      'SuiHairpinAttributesDialog',
+      'SuiLyricDialog',
+      'SuiChordChangeDialog',
+      'SuiTextTransformDialog',
+      'SuiScoreViewDialog',
+      'SuiScorePreferencesDialog',
+      'SuiLyricDialog',
+      'SuiChordChangeDialog',
     ]
   }
   static get allHelpFiles() {
@@ -174,6 +206,12 @@ class SmoLanguage {
    static get ar() {
      var strings = JSON.parse(smoLanguageStringAr);
      var rv = {dir:'rtl',strings:strings,helpHtml:{}};
+     return rv;
+   }
+
+   static get de() {
+     var strings = JSON.parse(smoLanguageStringDe);
+     var rv = {dir:'ltr',strings:strings,helpHtml:{}};
      return rv;
    }
 }

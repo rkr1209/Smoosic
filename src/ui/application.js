@@ -1,48 +1,51 @@
 class SuiApplication {
-
-  static createUtApplication(config) {
-    if (!config) {
-      config = {};
-    }
-    var _config = {
-      scoreLoadOrder:['library'],
-      scoreLoadJson:'emptyScoreJson',
-      ribon:false,
-      editor:false,
-      menus:false,
-      controller:'utController',
-      domSource:'UtDom',
-      languageDir:'ltr'
-    };
-    Vex.Merge(_config,config);
-    return new SuiApplication(_config);
-  }
   static get defaultConfig() {
     return {
-      smoPath:'..',
-      language:'en',
-      scoreLoadOrder:['query','local','library'],
-      scoreLoadJson:'basicJson',
-      eventsSource:'browserEventSource',
-      controller:'suiController',
-      smoDomContainer:'smoo',
-      vexDomContainer:'boo',
-      domSource:'SuiDom',
-      ribbon:true,
-      editor:true,
-      menus:true,
-      title:'Smoosic',
-      languageDir:'ltr'
+      smoPath: '..',
+      language: 'en',
+      scoreLoadOrder: ['query', 'local', 'library'],
+      scoreLoadJson: 'basicJson',
+      eventsSource: 'browserEventSource',
+      controller: 'suiController',
+      smoDomContainer: 'smoo',
+      vexDomContainer: 'boo',
+      domSource:' SuiDom',
+      ribbon: true,
+      keyCommands: true,
+      menus: true,
+      title: 'Smoosic',
+      languageDir: 'ltr',
+      demonPollTime: 50, // how often we poll the score to see if it changed
+      idleRedrawTime: 1000, // maximum time between score modification and render
     }
+  }
+  static configure(params) {
+    var config = {};
+    Vex.Merge(config, SuiApplication.defaultConfig);
+    Vex.Merge(config, params);
+    window.SmoConfig = config;
+    SuiApplication.registerFonts();
   }
 
   constructor(params) {
-    var config = {};
-    Vex.Merge(config,SuiApplication.defaultConfig);
-    Vex.Merge(config,params);
-    window.SmoConfig = config;
-    this.start();
+    SuiApplication.configure(params);
+    this.startApplication();
   }
+  startApplication() {
+    var score = null;
+    for (var i = 0; i < SmoConfig.scoreLoadOrder.length; ++i) {
+      const loader = SmoConfig.scoreLoadOrder[i];
+      const method = loader + 'ScoreLoad';
+      const ss = this[method]();
+      if (ss) {
+        score = ss;
+        break;
+      }
+    }
+    // var controller =
+    this.createUi(score);
+  }
+
   // ## createUi
   // ### Description:
   // Convenience constructor, taking a renderElement and a score.
@@ -51,25 +54,120 @@ class SuiApplication {
     var params = suiController.keyBindingDefaults;
     params.eventSource = new browserEventSource(); // events come from the browser UI.
 
-    params.layout = suiScoreLayout.createScoreLayout(document.getElementById(SmoConfig.vexDomContainer),score);
-    params.scroller = new suiScroller();
-    params.tracker = new suiTracker(params.layout,params.scroller);
-    params.layout.setMeasureMapper(params.tracker);
-    if (SmoConfig.editor) {
-      params.editor = new suiEditor(params);
+    const scoreRenderer = SuiScoreRender.createScoreRenderer(document.getElementById(SmoConfig.vexDomContainer), score);
+    params.eventSource.setRenderElement(scoreRenderer.renderElement);
+    params.view = new SuiScoreViewOperations(scoreRenderer, score, '.musicRelief');
+    if (SmoConfig.keyCommands) {
+      params.keyCommands = new SuiKeyCommands(params);
     }
     if (SmoConfig.menus) {
       params.menus = new suiMenuManager(params);
     }
-    params.layoutDemon = new SuiLayoutDemon(params);
+    params.layoutDemon = new SuiRenderDemon(params);
     var ctor = eval(SmoConfig.controller);
     var controller = new ctor(params);
-    if (SmoConfig.menus) {
-      params.menus.undoBuffer = controller.undoBuffer;
-    }
-    params.layout.score = score;
     eval(SmoConfig.domSource).splash();
     this.controller = controller;
+  }
+  static registerFonts() {
+    VF.TextFont.registerFont({
+      name: ArialFont.name,
+      resolution: ArialFont.resolution,
+      glyphs: ArialFont.glyphs,
+      family: ArialFont.fontFamily,
+      serifs: false,
+      monospaced: false,
+      italic: true,
+      bold: true,
+      maxSizeGlyph: 'H',
+      superscriptOffset: 0.66,
+      subscriptOffset: 0.66,
+      description: 'Built-in sans font',
+    });
+    VF.TextFont.registerFont({
+      name: TimesFont.name,
+      resolution: TimesFont.resolution,
+      glyphs: TimesFont.glyphs,
+      family: TimesFont.fontFamily,
+      serifs: false,
+      monospaced: false,
+      italic: true,
+      bold: true,
+      maxSizeGlyph: 'H',
+      superscriptOffset: 0.66,
+      subscriptOffset: 0.66,
+      description: 'Built-in serif font',
+    });
+    VF.TextFont.registerFont({
+      name: Commissioner_MediumFont.name,
+      resolution: Commissioner_MediumFont.resolution,
+      glyphs: Commissioner_MediumFont.glyphs,
+      family: Commissioner_MediumFont.fontFamily,
+      serifs: false,
+      monospaced: false,
+      italic: false,
+      bold: false,
+      maxSizeGlyph: 'H',
+      superscriptOffset: 0.66,
+      subscriptOffset: 0.66,
+      description: 'Low-contrast sans-serif text font',
+    });
+    VF.TextFont.registerFont({
+      name: Concert_OneFont.name,
+      resolution: Concert_OneFont.resolution,
+      glyphs: Concert_OneFont.glyphs,
+      family: Concert_OneFont.fontFamily,
+      serifs: false,
+      monospaced: false,
+      italic: false,
+      bold: false,
+      maxSizeGlyph: 'H',
+      superscriptOffset: 0.66,
+      subscriptOffset: 0.66,
+      description: 'Rounded grotesque typeface inspired by 19th century 3D l',
+    });
+    VF.TextFont.registerFont({
+      name: MerriweatherFont.name,
+      resolution: MerriweatherFont.resolution,
+      glyphs: MerriweatherFont.glyphs,
+      family: MerriweatherFont.fontFamily,
+      serifs: true,
+      monospaced: false,
+      italic: false,
+      bold: false,
+      maxSizeGlyph: 'H',
+      superscriptOffset: 0.66,
+      subscriptOffset: 0.66,
+      description: 'Serif screen font from Sorkin Type',
+    });
+    VF.TextFont.registerFont({
+      name: SourceSansProFont.name,
+      resolution: SourceSansProFont.resolution,
+      glyphs: SourceSansProFont.glyphs,
+      family: SourceSansProFont.fontFamily,
+      serifs: false,
+      monospaced: false,
+      italic: false,
+      bold: false,
+      maxSizeGlyph: 'H',
+      superscriptOffset: 0.66,
+      subscriptOffset: 0.66,
+      description: 'Open source Sans screen font from Adobe',
+    });
+    VF.TextFont.registerFont({
+      name: SourceSerifProFont.name,
+      resolution: SourceSerifProFont.resolution,
+      glyphs: SourceSerifProFont.glyphs,
+      family: SourceSerifProFont.fontFamily,
+      serifs: false,
+      monospaced: false,
+      italic: false,
+      bold: false,
+      maxSizeGlyph: 'H',
+      superscriptOffset: 0.66,
+      subscriptOffset: 0.66,
+      description: 'Open source Serif screen font from Adobe',
+    });
   }
 
   static _nvQueryPair(str) {
@@ -80,19 +178,6 @@ class SuiApplication {
       rv[name] = decodeURIComponent(ar[i+1]);
     }
     return rv;
-  }
-  start() {
-    var score = null;
-    for (var i = 0;i < SmoConfig.scoreLoadOrder.length; ++i) {
-      var loader = SmoConfig.scoreLoadOrder[i];
-      var method = loader+'ScoreLoad';
-      var ss = this[method]();
-      if (ss) {
-        score = ss;
-        break;
-      }
-    }
-    var controller =this.createUi(score);
   }
 
   localScoreLoad() {
@@ -123,10 +208,18 @@ class SuiApplication {
           }
         } else if (pairs['lang']) {
           SuiApplication._deferLanguageSelection(pairs['lang']);
+        } else if (pairs['translate']) {
+          SuiApplication._deferCreateTranslator(pairs['translate']);
         }
       });
     }
     return score;
+  }
+
+  static _deferCreateTranslator(lang) {
+    setTimeout(() => {
+      var transDom =  SmoTranslationEditor.startEditor(lang);
+    }, 1);
   }
 
   static _deferLanguageSelection(lang) {
